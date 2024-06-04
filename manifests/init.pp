@@ -1,13 +1,21 @@
+# @summary deploy homebrew package support
+#
+# @param user
+# @param command_line_tools_package
+# @param command_line_tools_source
+# @param github_token
+# @param group
+# @param multiuser
+#
 class homebrew (
-  $user,
-  $command_line_tools_package = undef,
-  $command_line_tools_source  = undef,
-  $github_token               = undef,
-  $group                      = 'admin',
-  $multiuser                  = false,
+  String           $user,
+  Optional[String] $command_line_tools_package = undef,
+  Optional[String] $command_line_tools_source  = undef,
+  Optional[String] $github_token               = undef,
+  String           $group                      = 'admin',
+  Boolean          $multiuser                  = false,
 ) {
-
-  if $::operatingsystem != 'Darwin' {
+  if $facts['os']['name'] != 'Darwin' {
     fail('This Module works on Mac OSX only!')
   }
 
@@ -15,19 +23,18 @@ class homebrew (
     fail('Homebrew does not support installation as the "root" user.')
   }
 
-  class { '::homebrew::compiler': }
-  -> class { '::homebrew::install': }
+  class { 'homebrew::compiler': }
+  -> class { 'homebrew::install': }
 
-  contain '::homebrew::compiler'
-  contain '::homebrew::install'
+  contain 'homebrew::compiler'
+  contain 'homebrew::install'
 
   if $homebrew::github_token {
-    file { '/etc/environment': ensure => present }
+    file { '/etc/environment': ensure => file }
     -> file_line { 'homebrew-github-api-token':
       path  => '/etc/environment',
       line  => "HOMEBREW_GITHUB_API_TOKEN=${homebrew::github_token}",
       match => '^HOMEBREW_GITHUB_API_TOKEN',
     }
   }
-
 }

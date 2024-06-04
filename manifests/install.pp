@@ -1,5 +1,7 @@
+# @summary install homebrew
+#
+# @api private
 class homebrew::install {
-
   case $::facts[processors][models][0] {
     # brew complains if it finds its bin in /usr/local/bin on Apple Silicon
     # so we should put brew where it expects to be
@@ -59,22 +61,22 @@ class homebrew::install {
   $brew_folders = flatten(
     $brew_folders_extra,
     [
-    "${brew_root}/opt",
-    "${brew_root}/Caskroom",
-    "${brew_root}/Cellar",
-    "${brew_root}/var/homebrew",
-    "${brew_root}/share",
-    "${brew_root}/share/doc",
-    "${brew_root}/share/info",
-    "${brew_root}/share/man",
-    "${brew_root}/share/man1",
-    "${brew_root}/share/man2",
-    "${brew_root}/share/man3",
-    "${brew_root}/share/man4",
-    "${brew_root}/share/man5",
-    "${brew_root}/share/man6",
-    "${brew_root}/share/man7",
-    "${brew_root}/share/man8",
+      "${brew_root}/opt",
+      "${brew_root}/Caskroom",
+      "${brew_root}/Cellar",
+      "${brew_root}/var/homebrew",
+      "${brew_root}/share",
+      "${brew_root}/share/doc",
+      "${brew_root}/share/info",
+      "${brew_root}/share/man",
+      "${brew_root}/share/man1",
+      "${brew_root}/share/man2",
+      "${brew_root}/share/man3",
+      "${brew_root}/share/man4",
+      "${brew_root}/share/man5",
+      "${brew_root}/share/man6",
+      "${brew_root}/share/man7",
+      "${brew_root}/share/man8",
   ])
 
   file { $brew_folders:
@@ -88,7 +90,7 @@ class homebrew::install {
       exec { "chmod-${brew_folder}":
         command => "/bin/chmod -R 775 ${brew_folder}",
         unless  => "/usr/bin/stat -f '%OLp' '${brew_folder}' | /usr/bin/grep -w '775'",
-        notify  => Exec["set-${brew_folder}-directory-inherit"]
+        notify  => Exec["set-${brew_folder}-directory-inherit"],
       }
       exec { "chown-${brew_folder}":
         command => "/usr/sbin/chown -R :${homebrew::group} ${brew_folder}'",
@@ -116,5 +118,4 @@ class homebrew::install {
       group  => $homebrew::group,
     }
   }
-
 }
