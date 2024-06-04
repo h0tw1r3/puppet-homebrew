@@ -1,28 +1,28 @@
 require 'puppet/provider/package'
 
-Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) do
+Puppet::Type.type(:package).provide(:tap, parent: Puppet::Provider::Package) do
   desc 'Tap management using HomeBrew on OSX'
 
-  confine :operatingsystem => :darwin
+  confine operatingsystem: :darwin
 
   has_feature :installable
   has_feature :uninstallable
 
   has_feature :install_options
 
-  if (File.exist?('/usr/local/bin/brew')) then
+  if File.exist?('/usr/local/bin/brew')
     @brewbin = '/usr/local/bin/brew'
     true
-  elsif (File.exist?('/opt/homebrew/bin/brew')) then
+  elsif File.exist?('/opt/homebrew/bin/brew')
     @brewbin = '/opt/homebrew/bin/brew'
   end
 
-  commands :brew => @brewbin
-  commands :stat => '/usr/bin/stat'
+  commands brew: @brewbin
+  commands stat: '/usr/bin/stat'
 
   def self.execute(cmd, failonfail = false, combine = false)
-    owner = stat('-nf', '%Uu', "#{@brewbin}").to_i
-    group = stat('-nf', '%Ug', "#{@brewbin}").to_i
+    owner = stat('-nf', '%Uu', @brewbin).to_i
+    group = stat('-nf', '%Ug', @brewbin).to_i
     home  = Etc.getpwuid(owner).dir
 
     if owner == 0
@@ -40,12 +40,12 @@ Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) 
 
     if Puppet.features.bundled_environment?
       Bundler.with_clean_env do
-        super(cmd, :uid => uid, :gid => gid, :combine => combine,
-              :custom_environment => { 'HOME' => home }, :failonfail => failonfail)
+        super(cmd, uid: uid, gid: gid, combine: combine,
+              custom_environment: { 'HOME' => home }, failonfail: failonfail)
       end
     else
-      super(cmd, :uid => uid, :gid => gid, :combine => combine,
-            :custom_environment => { 'HOME' => home }, :failonfail => failonfail)
+      super(cmd, uid: uid, gid: gid, combine: combine,
+            custom_environment: { 'HOME' => home }, failonfail: failonfail)
     end
   end
 
@@ -64,7 +64,7 @@ Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) 
 
     begin
       Puppet.debug "Tapping #{resource_name}"
-      execute([command(:brew), :tap, resource_name, *install_options], :failonfail => true)
+      execute([command(:brew), :tap, resource_name, *install_options], failonfail: true)
     rescue Puppet::ExecutionFailure => detail
       raise Puppet::Error, "Could not tap resource: #{detail}"
     end
@@ -75,7 +75,7 @@ Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) 
 
     begin
       Puppet.debug "Untapping #{resource_name}"
-      execute([command(:brew), :untap, resource_name], :failonfail => true)
+      execute([command(:brew), :untap, resource_name], failonfail: true)
     rescue Puppet::ExecutionFailure => detail
       raise Puppet::Error, "Could not untap resource: #{detail}"
     end
@@ -91,7 +91,7 @@ Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) 
         line.chomp!
         next unless [resource_name, resource_name.gsub('homebrew-', '')].include?(line.downcase)
 
-        return { :name => line, :ensure => 'present', :provider => 'tap' }
+        return { name: line, ensure: 'present', provider: 'tap' }
       end
     rescue Puppet::ExecutionFailure => detail
       Puppet.Err "Could not query tap: #{detail}"
@@ -104,13 +104,13 @@ Puppet::Type.type(:package).provide(:tap, :parent => Puppet::Provider::Package) 
     taps = []
 
     begin
-      Puppet.debug "Listing currently tapped repositories"
+      Puppet.debug 'Listing currently tapped repositories'
       output = execute([command(:brew), :tap])
       output.each_line do |line|
         line.chomp!
         next if line.empty?
 
-        taps << new({ :name => line, :ensure => 'present', :provider => 'tap' })
+        taps << new({ name: line, ensure: 'present', provider: 'tap' })
       end
       taps
     rescue Puppet::ExecutionFailure => detail

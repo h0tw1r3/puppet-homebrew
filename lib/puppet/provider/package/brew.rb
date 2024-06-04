@@ -1,9 +1,9 @@
 require 'puppet/provider/package'
 
-Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package) do
+Puppet::Type.type(:package).provide(:brew, parent: Puppet::Provider::Package) do
   desc 'Package management using HomeBrew on OSX'
 
-  confine :operatingsystem => :darwin
+  confine operatingsystem: :darwin
 
   has_feature :installable
   has_feature :uninstallable
@@ -12,19 +12,19 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
 
   has_feature :install_options
 
-  if (File.exist?('/usr/local/bin/brew')) then
+  if File.exist?('/usr/local/bin/brew')
     @brewbin = '/usr/local/bin/brew'
     true
-  elsif (File.exist?('/opt/homebrew/bin/brew')) then
+  elsif File.exist?('/opt/homebrew/bin/brew')
     @brewbin = '/opt/homebrew/bin/brew'
   end
 
-  commands :brew => @brewbin
-  commands :stat => '/usr/bin/stat'
+  commands brew: @brewbin
+  commands stat: '/usr/bin/stat'
 
   def self.execute(cmd, failonfail = false, combine = false)
-    owner = stat('-nf', '%Uu', "#{@brewbin}").to_i
-    group = stat('-nf', '%Ug', "#{@brewbin}").to_i
+    owner = stat('-nf', '%Uu', @brewbin).to_i
+    group = stat('-nf', '%Ug', @brewbin).to_i
     home  = Etc.getpwuid(owner).dir
 
     if owner == 0
@@ -42,17 +42,17 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
 
     if Puppet.features.bundled_environment?
       Bundler.with_clean_env do
-        super(cmd, :uid => uid, :gid => gid, :combine => combine,
-              :custom_environment => { 'HOME' => home }, :failonfail => failonfail)
+        super(cmd, uid: uid, gid: gid, combine: combine,
+              custom_environment: { 'HOME' => home }, failonfail: failonfail)
       end
     else
-      super(cmd, :uid => uid, :gid => gid, :combine => combine,
-            :custom_environment => { 'HOME' => home }, :failonfail => failonfail)
+      super(cmd, uid: uid, gid: gid, combine: combine,
+            custom_environment: { 'HOME' => home }, failonfail: failonfail)
     end
   end
 
-  def self.instances(justme = false)
-    package_list.collect { |hash| new(hash) }
+  def self.instances(_justme = false)
+    package_list.map { |hash| new(hash) }
   end
 
   def execute(*args)
@@ -63,7 +63,7 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
 
   def fix_checksum(files)
     begin
-      for file in files
+      files.each do |file|
         File.delete(file)
       end
     rescue Errno::ENOENT
@@ -74,7 +74,7 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
   end
 
   def resource_name
-    if @resource[:name].match(/^https?:\/\//)
+    if %r{^https?://}.match?(@resource[:name])
       @resource[:name]
     else
       @resource[:name].downcase
@@ -97,29 +97,29 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
   end
 
   def latest
-    package = self.class.package_list(:justme => resource_name)
+    package = self.class.package_list(justme: resource_name)
     package[:ensure]
   end
 
   def query
-    self.class.package_list(:justme => resource_name)
+    self.class.package_list(justme: resource_name)
   end
 
   def install
     begin
       Puppet.debug "Looking for #{install_name} package..."
-      execute([command(:brew), :info, install_name], :failonfail => true)
-    rescue Puppet::ExecutionFailure => detail
+      execute([command(:brew), :info, install_name], failonfail: true)
+    rescue Puppet::ExecutionFailure
       raise Puppet::Error, "Could not find package: #{install_name}"
     end
 
     begin
-      Puppet.debug "Package found, installing..."
-      output = execute([command(:brew), :install, install_name, *install_options], :failonfail => true)
+      Puppet.debug 'Package found, installing...'
+      output = execute([command(:brew), :install, install_name, *install_options], failonfail: true)
 
-      if output =~ /sha256 checksum/
-        Puppet.debug "Fixing checksum error..."
-        mismatched = output.match(/Already downloaded: (.*)/).captures
+      if %r{sha256 checksum}.include?(output)
+        Puppet.debug 'Fixing checksum error...'
+        mismatched = output.match(%r{Already downloaded: (.*)}).captures
         fix_checksum(mismatched)
       end
     rescue Puppet::ExecutionFailure => detail
@@ -128,25 +128,21 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
   end
 
   def uninstall
-    begin
-      Puppet.debug "Uninstalling #{resource_name}"
-      execute([command(:brew), :uninstall, resource_name], :failonfail => true)
-    rescue Puppet::ExecutionFailure => detail
-      raise Puppet::Error, "Could not uninstall package: #{detail}"
-    end
+    Puppet.debug "Uninstalling #{resource_name}"
+    execute([command(:brew), :uninstall, resource_name], failonfail: true)
+  rescue Puppet::ExecutionFailure => detail
+    raise Puppet::Error, "Could not uninstall package: #{detail}"
   end
 
   def update
-    begin
-      Puppet.debug "Upgrading #{resource_name}"
-      execute([command(:brew), :upgrade, resource_name], :failonfail => true)
-    rescue Puppet::ExecutionFailure => detail
-      raise Puppet::Error, "Could not upgrade package: #{detail}"
-    end
+    Puppet.debug "Upgrading #{resource_name}"
+    execute([command(:brew), :upgrade, resource_name], failonfail: true)
+  rescue Puppet::ExecutionFailure => detail
+    raise Puppet::Error, "Could not upgrade package: #{detail}"
   end
 
-  def self.package_list(options={})
-    Puppet.debug "Listing installed packages"
+  def self.package_list(options = {})
+    Puppet.debug 'Listing installed packages'
 
     cmd_line = [command(:brew), :list, '--versions']
     if options[:justme]
@@ -163,34 +159,34 @@ Puppet::Type.type(:package).provide(:brew, :parent => Puppet::Provider::Package)
     # logic below.  These look like they should be on stderr anyway based
     # on comparison to other output on stderr.  homebrew bug?
     re_excludes = Regexp.union([
-      /^==>.*/,
-      /^Tapped \d+ formulae.*/,
-      ])
+                                 %r{^==>.*},
+                                 %r{^Tapped \d+ formulae.*},
+                               ])
     lines = cmd_output.lines.delete_if { |line| line.match(re_excludes) }
 
     if options[:justme]
       if lines.empty?
         Puppet.debug "Package #{options[:justme]} not installed"
-        return nil
+        nil
       else
         if lines.length > 1
           Puppet.warning "Multiple matches for package #{options[:justme]} - using first one found"
         end
         line = lines.shift
         Puppet.debug "Found package #{line}"
-        return name_version_split(line)
+        name_version_split(line)
       end
     else
-      return lines.map{ |line| name_version_split(line) }
+      lines.map { |l| name_version_split(l) }
     end
   end
 
   def self.name_version_split(line)
-    if line =~ (/^(\S+)\s+(.+)/)
+    if line =~ (%r{^(\S+)\s+(.+)})
       {
-        :name     => $1,
-        :ensure   => $2,
-        :provider => :brew
+        name: Regexp.last_match(1),
+        ensure: Regexp.last_match(2),
+        provider: :brew
       }
     else
       Puppet.warning "Could not match #{line}"
