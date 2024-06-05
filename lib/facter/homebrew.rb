@@ -17,6 +17,7 @@ Facter.add(:homebrew) do
   setcode do
     {
       has_compiler: has_compiler,
+      command: brew_cmd,
       prefix: brew_prefix,
     }
   end
