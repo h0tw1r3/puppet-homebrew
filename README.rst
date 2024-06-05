@@ -166,5 +166,5 @@ Credit for logic involved in tapping repositories goes to `gildas`_.
 .. _create a personal access token: https://github.com/settings/tokens/new?scopes=&description=Homebrew
 .. _gildas: https://github.com/gildas/puppet-homebrew
 .. _kelseyhightower: https://github.com/kelseyhightower
-.. _Puppet Forge: https://forge.puppetlabs.com/thekevjames/homebrew
+.. _Puppet Forge: https://forge.puppetlabs.com/h0tw1r3/homebrew
 .. _Resource Collectors: https://docs.puppet.com/puppet/latest/reference/lang_collectors.html
