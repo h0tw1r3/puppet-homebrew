@@ -15,8 +15,8 @@ class homebrew (
   String           $group                      = 'admin',
   Boolean          $multiuser                  = false,
 ) {
-  if $facts['os']['name'] != 'Darwin' {
-    fail('This Module works on Mac OSX only!')
+  if $facts.get('os.name') != 'Darwin' {
+    fail('This module only works on Mac OSX!')
   }
 
   if $homebrew::user == 'root' {
