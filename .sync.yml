@@ -1,1 +1,7 @@
---- {}
+---
+Gemfile:
+  overrides:
+    - gem: puppet_litmus
+      git: https://github.com/puppetlabs/puppet_litmus.git
+      branch: main
+      platforms: [ 'ruby', 'x64_mingw' ]

@@ -1,0 +1,51 @@
+name: "CI"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'examples/**'
+      - 'LICENSE'
+      - 'CODEOWNERS'
+      - 'AUTHORS'
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Debug"
+        type: boolean
+        required: false
+      run_spec:
+        description: "Run Spec job"
+        type: boolean
+        required: false
+        default: true
+      run_acceptance:
+        description: "Run Acceptance job"
+        type: boolean
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  Matrix:
+    uses: ./.github/workflows/matrix.yml
+  Spec:
+    if: inputs.run_spec
+    needs: Matrix
+    uses: ./.github/workflows/module_spec.yml
+    secrets: inherit
+    with:
+      debug: ${{ inputs.debug == 'true' || contains(github.event.pull_request.labels.*.name, 'debug') }}
+      matrix: ${{ needs.Matrix.outputs.spec_matrix }}
+  Acceptance:
+    if: inputs.run_acceptance
+    needs: [ Matrix, Spec ]
+    uses: ./.github/workflows/module_acceptance.yml
+    secrets: inherit
+    with:
+      debug: ${{ inputs.debug == 'true' || contains(github.event.pull_request.labels.*.name, 'debug') }}
+      matrix: ${{ needs.Matrix.outputs.acceptance_matrix }}
