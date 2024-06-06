@@ -1,0 +1,79 @@
+name: "Module Spec Matrix"
+
+on:
+  workflow_call:
+    inputs:
+      matrix:
+        description: "JSON matrix"
+        required: true
+        type: string
+      ignore_dependency_check:
+        description: "Ignore dependency check failure"
+        required: false
+        type: boolean
+        default: false
+      debug:
+        description: "Run jobs with debug steps and flags enabled"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  Test:
+    name: "Test Puppet ${{ matrix.puppet_version }} with ruby ${{ matrix.ruby_version }}"
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix) }}
+    runs-on: ubuntu-latest
+    env:
+      PUPPET_GEM_VERSION: ${{ matrix.puppet_version }}
+      FACTER_GEM_VERSION: 'https://github.com/puppetlabs/facter#main'  # why is this set?
+
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
+
+      - name: "Setup ruby"
+        uses: "ruby/setup-ruby@v1"
+        with:
+          ruby-version: ${{ matrix.ruby_version }}
+          bundler-cache: true
+
+      - name: Debug
+        if: ${{ inputs.debug == true }}
+        run: |
+          echo ::group::bundler environment
+          bundle env
+          echo ::endgroup::
+          echo "RSPEC_DEBUG=1" >> $GITHUB_ENV
+          echo "DEBUG=1" >> $GITHUB_ENV
+
+      - name: "Cache fixture modules"
+        id: cache-fixtures
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-fixtures-modules
+        with:
+          path: spec/fixtures/modules
+          key: test-${{ env.cache-name }}-${{ hashFiles('metadata.json', '.fixtures.yml') }}
+          restore-keys: |
+            test-${{ env.cache-name }}-
+            test-
+
+      - name: "Install module dependencies"
+        run: bundle exec rake spec_prep
+
+      - name: "Static & syntax & lint tests"
+        run: bundle exec rake test:check test:syntax test:lint
+
+      - name: "Spec tests"
+        run: bundle exec rake parallel_spec_standalone
+
+      - name: "Metadata dependency check"
+        run: |
+          bundle exec rake metadata_deps && EC=$? || EC=$?
+          if [ "${{ inputs.ignore_dependency_check }}" == "true" ] ; then
+            echo '::warning title=::ignoring dependency check failure'
+          else
+            exit $EC
+          fi

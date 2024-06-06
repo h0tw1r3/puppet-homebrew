@@ -15,7 +15,13 @@
   ],
   "operatingsystem_support": [
     {
-      "operatingsystem": "Darwin"
+      "operatingsystem": "Darwin",
+      "operatingsystemrelease": [
+        "20",
+        "21",
+        "22",
+        "23"
+      ]
     }
   ],
   "requirements": [
