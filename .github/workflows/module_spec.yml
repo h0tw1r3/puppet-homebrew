@@ -63,8 +63,8 @@ jobs:
       - name: "Install module dependencies"
         run: bundle exec rake spec_prep
 
-      - name: "Static & syntax & lint tests"
-        run: bundle exec rake test:check test:syntax test:lint
+      - name: "Static analysis"
+        run: bundle exec rake test:static
 
       - name: "Spec tests"
         run: bundle exec rake parallel_spec_standalone
