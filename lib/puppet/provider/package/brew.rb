@@ -178,7 +178,7 @@ Puppet::Type.type(:package).provide(:brew, parent: Puppet::Provider::Package) do
     if line =~ (%r{^(\S+)\s+(.+)})
       {
         name: Regexp.last_match(1),
-        ensure: Regexp.last_match(2),
+        ensure: Regexp.last_match(2).split(' '),
         provider: :brew
       }
     else
